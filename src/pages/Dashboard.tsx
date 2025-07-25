@@ -27,6 +27,17 @@ interface RideSummary {
   route_data: any;
 }
 
+// Define a minimal type for routeData
+interface RouteDataGeometry {
+  type: string;
+  coordinates: [number, number][];
+}
+interface RouteData {
+  type: string;
+  properties: Record<string, unknown>;
+  geometry: RouteDataGeometry;
+}
+
 const formatDuration = (start: string, end: string) => {
   const duration = new Date(end).getTime() - new Date(start).getTime();
   const hours = Math.floor(duration / 3600000);
@@ -247,20 +258,30 @@ const Dashboard = () => {
   );
 };
 
-const getRoutePositions = (routeData: any) => {
-  if (!routeData || !routeData.geometry || !routeData.geometry.coordinates) {
+const getRoutePositions = (routeData: unknown): [number, number][] => {
+  if (
+    !routeData ||
+    typeof routeData !== 'object' ||
+    !('geometry' in routeData) ||
+    !routeData.geometry ||
+    typeof routeData.geometry !== 'object' ||
+    !('coordinates' in routeData.geometry) ||
+    !Array.isArray((routeData.geometry as { coordinates: unknown }).coordinates)
+  ) {
     return [];
   }
-  return routeData.geometry.coordinates.map(([lng, lat]: number[]) => [lat, lng]);
+  return ((routeData.geometry as { coordinates: unknown[] }).coordinates as [number, number][])
+    .filter((coord: [number, number]) => Array.isArray(coord) && coord.length === 2 && Number.isFinite(coord[0]) && Number.isFinite(coord[1]))
+    .map((coord: [number, number]) => [coord[1], coord[0]]);
 };
 
-const getRouteBounds = (routeData: any) => {
-  if (!routeData || !routeData.geometry || !routeData.geometry.coordinates) {
+const getRouteBounds = (routeData: unknown): [[number, number], [number, number]] => {
+  const positions = getRoutePositions(routeData);
+  if (!positions.length) {
     return [[0, 0], [0, 0]];
   }
-  const positions = getRoutePositions(routeData);
-  const lats = positions.map(([lat]) => lat);
-  const lngs = positions.map(([, lng]) => lng);
+  const lats = positions.map((pos: [number, number]) => pos[0]);
+  const lngs = positions.map((pos: [number, number]) => pos[1]);
   return [
     [Math.min(...lats), Math.min(...lngs)],
     [Math.max(...lats), Math.max(...lngs)]

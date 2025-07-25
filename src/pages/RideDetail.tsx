@@ -49,11 +49,21 @@ const RideDetail = () => {
         fetchRide();
     }, [rideId]);
 
-    const getRoutePositions = (routeData: any) => {
-        if (!routeData || !routeData.geometry || !routeData.geometry.coordinates) {
+    const getRoutePositions = (routeData: unknown): [number, number][] => {
+        if (
+            !routeData ||
+            typeof routeData !== 'object' ||
+            !('geometry' in routeData) ||
+            !routeData.geometry ||
+            typeof routeData.geometry !== 'object' ||
+            !('coordinates' in routeData.geometry) ||
+            !Array.isArray((routeData.geometry as { coordinates: unknown }).coordinates)
+        ) {
             return [];
         }
-        return routeData.geometry.coordinates.map(([lng, lat]: number[]) => [lat, lng]);
+        return ((routeData.geometry as { coordinates: unknown[] }).coordinates as [number, number][])
+            .filter((coord: [number, number]) => Array.isArray(coord) && coord.length === 2 && Number.isFinite(coord[0]) && Number.isFinite(coord[1]))
+            .map((coord: [number, number]) => [coord[1], coord[0]]);
     };
 
     const getWindDirectionArrow = (degree: number) => {

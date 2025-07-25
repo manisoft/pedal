@@ -43,7 +43,16 @@ function App() {
 
   useEffect(() => {
     const fetchUserRole = async () => {
+      // Add a small delay to ensure session is established
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
       try {
+        // Only attempt to fetch user role if we have a session
+        if (!session) {
+          setUserRole('user'); // Default to 'user' if no session
+          return;
+        }
+
         const { data: { user }, error: userError } = await supabase.auth.getUser();
         if (userError || !user) {
           console.error('Error fetching user:', userError);
